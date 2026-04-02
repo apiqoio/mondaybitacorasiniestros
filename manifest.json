@@ -1,0 +1,25 @@
+{
+  "app_name": "Bitácora Movilidad - Consulta Siniestros",
+  "app_versions": [
+    {
+      "version_data": {
+        "features": [
+          {
+            "type": "ItemView",
+            "name": "Consulta Siniestro",
+            "url": "https://TU_DOMINIO/item-view",
+            "description": "Consulta datos del siniestro desde la API y puebla campos del tablero"
+          }
+        ],
+        "permissions": [
+          "me:read",
+          "boards:read",
+          "boards:write",
+          "items:read",
+          "items:write",
+          "storage"
+        ]
+      }
+    }
+  ]
+}

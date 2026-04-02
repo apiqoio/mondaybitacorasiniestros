@@ -1,0 +1,17 @@
+{
+  "name": "monday-bitacora-movilidad",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "apps/item-view",
+    "server"
+  ],
+  "scripts": {
+    "dev": "concurrently \"npm run dev --workspace=server\" \"npm run dev --workspace=apps/item-view\"",
+    "build": "npm run build --workspace=server && npm run build --workspace=apps/item-view",
+    "start": "npm run start --workspace=server"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}
