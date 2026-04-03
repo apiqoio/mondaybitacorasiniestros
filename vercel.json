@@ -1,7 +1,5 @@
 {
   "version": 2,
-  "buildCommand": "cd apps/item-view && npm install && npm run build",
-  "outputDirectory": "apps/item-view/dist",
   "rewrites": [
     { "source": "/api/:path*", "destination": "/api/index" }
   ]
