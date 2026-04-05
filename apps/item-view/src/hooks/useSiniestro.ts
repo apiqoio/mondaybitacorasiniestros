@@ -1,7 +1,7 @@
 import { useCallback, useState } from 'react';
 import { consultarSiniestro, escribirCampos } from '../services/siniestro.service';
 import { loadMapping } from '../services/storage.service';
-import type { SiniestroApiResponse } from '@shared/types';
+import type { SiniestroApiResponse, SearchParams } from '@shared/types';
 
 export type SiniestroStatus = 'idle' | 'loading' | 'success' | 'error';
 
@@ -11,14 +11,14 @@ export function useSiniestro() {
   const [message, setMessage] = useState<string | null>(null);
 
   const consultar = useCallback(
-    async (boardId: string, itemId: string, numeroSiniestro: string) => {
+    async (boardId: string, itemId: string, params: SearchParams) => {
       setStatus('loading');
       setMessage(null);
       setData(null);
 
       try {
         // 1. Traer datos de la API
-        const apiData = await consultarSiniestro(numeroSiniestro);
+        const apiData = await consultarSiniestro(params);
         setData(apiData);
 
         // 2. Leer mapeo guardado

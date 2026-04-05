@@ -22,27 +22,42 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const secret = process.env.MONDAY_SIGNING_SECRET;
   if (!secret) return res.status(500).json({ error: 'Error de configuración del servidor' });
 
-  let mondayCtx: MondayContext;
+  let _mondayCtx: MondayContext;
   try {
-    mondayCtx = jwt.verify(token, secret) as MondayContext;
+    _mondayCtx = jwt.verify(token, secret) as MondayContext;
   } catch {
     return res.status(401).json({ error: 'Token inválido o expirado' });
   }
 
-  // Extraer número de siniestro del path /api/siniestros/:numero
-  const url = req.url ?? '';
-  const match = url.match(/\/siniestros\/(\d+)/);
-  if (!match) return res.status(400).json({ error: 'Número de siniestro inválido' });
-  const numero = match[1];
+  // Leer parámetros de búsqueda del query string
+  const { oficina, ramo, poliza, numeroSiniestro, filenet } = req.query as Record<string, string | undefined>;
 
-  // Llamar API externa
+  const hasPolizaSearch = !!(oficina && ramo && poliza);
+  const hasSiniestroSearch = !!numeroSiniestro;
+  const hasFilenetSearch = !!filenet;
+
+  if (!hasPolizaSearch && !hasSiniestroSearch && !hasFilenetSearch) {
+    return res.status(400).json({
+      error: 'Debe proporcionar al menos una opción de búsqueda: oficina+ramo+poliza, numeroSiniestro o filenet',
+    });
+  }
+
+  // Configuración de API externa
   const baseUrl = process.env.SINIESTROS_API_BASE_URL;
   const apiToken = process.env.SINIESTROS_API_TOKEN;
   if (!baseUrl || !apiToken) return res.status(500).json({ error: 'API externa no configurada' });
 
+  // Construir query string para la API externa
+  const params = new URLSearchParams();
+  if (oficina) params.set('oficina', oficina);
+  if (ramo) params.set('ramo', ramo);
+  if (poliza) params.set('poliza', poliza);
+  if (numeroSiniestro) params.set('numeroSiniestro', numeroSiniestro);
+  if (filenet) params.set('filenet', filenet);
+
   try {
     const upstream = await fetch(
-      `${baseUrl}/siniestros/${encodeURIComponent(numero)}`,
+      `${baseUrl}/siniestros?${params.toString()}`,
       {
         headers: {
           Authorization: `Bearer ${apiToken}`,

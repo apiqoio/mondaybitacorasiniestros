@@ -17,31 +17,52 @@ const limiter = rateLimit({
   message: { error: 'Demasiadas solicitudes, intenta más tarde' },
 });
 
-const ParamsSchema = z.object({
-  numero: z.string().regex(/^\d+$/, 'El número de siniestro debe ser numérico'),
-});
+const QuerySchema = z
+  .object({
+    oficina: z.string().optional(),
+    ramo: z.string().optional(),
+    poliza: z.string().optional(),
+    numeroSiniestro: z.string().optional(),
+    filenet: z.string().optional(),
+  })
+  .refine(
+    (data) => {
+      const hasPolizaSearch = !!(data.oficina && data.ramo && data.poliza);
+      const hasSiniestroSearch = !!data.numeroSiniestro;
+      const hasFilenetSearch = !!data.filenet;
+      return hasPolizaSearch || hasSiniestroSearch || hasFilenetSearch;
+    },
+    {
+      message:
+        'Debe proporcionar al menos una opción de búsqueda: oficina+ramo+poliza, numeroSiniestro o filenet',
+    },
+  );
 
 router.get(
-  '/:numero',
+  '/',
   validateMondaySession,
   limiter,
   async (req: Request, res: Response) => {
-    const parsed = ParamsSchema.safeParse(req.params);
+    const parsed = QuerySchema.safeParse(req.query);
     if (!parsed.success) {
-      res.status(400).json({ error: 'Número de siniestro inválido' });
+      res.status(400).json({ error: parsed.error.errors[0]?.message ?? 'Parámetros de búsqueda inválidos' });
       return;
     }
 
-    const { numero } = parsed.data;
+    const { oficina, ramo, poliza, numeroSiniestro, filenet } = parsed.data;
 
     try {
-      const data = await fetchSiniestro(numero);
+      const data = await fetchSiniestro({ oficina, ramo, poliza, numeroSiniestro, filenet });
 
       logger.info({
         action: 'siniestro_consultado',
         userId: req.mondayContext?.userId,
         accountId: req.mondayContext?.accountId,
-        numero,
+        oficina,
+        ramo,
+        poliza,
+        numeroSiniestro,
+        filenet,
       });
 
       res.json({ data });
@@ -58,7 +79,6 @@ router.get(
       logger.error({
         action: 'siniestro_error',
         userId: req.mondayContext?.userId,
-        numero,
         status,
       });
 

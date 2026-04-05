@@ -62,3 +62,19 @@ export interface ApiError {
   error: string;
   details?: unknown;
 }
+
+// Modos de búsqueda disponibles
+export type SearchMode = 'poliza' | 'siniestro' | 'filenet';
+
+// Parámetros de búsqueda para consultar la API
+export interface SearchParams {
+  mode: SearchMode;
+  // Modo poliza (todos obligatorios)
+  oficina?: string;
+  ramo?: string;
+  poliza?: string;
+  // Modo siniestro
+  numeroSiniestro?: string;
+  // Modo filenet
+  filenet?: string;
+}

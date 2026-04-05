@@ -1,18 +1,29 @@
 import mondaySdk from 'monday-sdk-js';
-import type { SiniestroApiResponse, MappingEntry } from '@shared/types';
+import type { SiniestroApiResponse, MappingEntry, SearchParams } from '@shared/types';
 
 const monday = mondaySdk();
 
 /**
  * Consulta la API externa de siniestros vía el backend proxy.
- * Usa el sessionToken de Monday para autenticar el request.
+ * Envía los parámetros de búsqueda como query string.
  */
 export async function consultarSiniestro(
-  numeroSiniestro: string,
+  params: SearchParams,
 ): Promise<SiniestroApiResponse> {
   const { data: token } = await monday.get('sessionToken');
 
-  const res = await fetch(`/api/siniestros/${encodeURIComponent(numeroSiniestro)}`, {
+  const queryParams = new URLSearchParams();
+  if (params.mode === 'poliza') {
+    queryParams.set('oficina', params.oficina!);
+    queryParams.set('ramo', params.ramo!);
+    queryParams.set('poliza', params.poliza!);
+  } else if (params.mode === 'siniestro') {
+    queryParams.set('numeroSiniestro', params.numeroSiniestro!);
+  } else if (params.mode === 'filenet') {
+    queryParams.set('filenet', params.filenet!);
+  }
+
+  const res = await fetch(`/api/siniestros?${queryParams.toString()}`, {
     method: 'GET',
     headers: {
       Authorization: `Bearer ${token}`,
