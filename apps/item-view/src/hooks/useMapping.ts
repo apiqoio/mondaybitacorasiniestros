@@ -10,6 +10,7 @@ export function useMapping(columns: BoardColumn[]) {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [saveSuccess, setSaveSuccess] = useState(false);
 
   // Carga inicial desde Monday Storage
   useEffect(() => {
@@ -24,7 +25,7 @@ export function useMapping(columns: BoardColumn[]) {
   const addRow = useCallback(() => {
     setMappings((prev) => [
       ...prev,
-      { apiField: '' as MappingEntry['apiField'], columnId: '', columnTitle: '', columnType: '' },
+      { apiField: '', columnId: '', columnTitle: '', columnType: '' },
     ]);
   }, []);
 
@@ -34,7 +35,6 @@ export function useMapping(columns: BoardColumn[]) {
         prev.map((row, i) => {
           if (i !== index) return row;
           const updated = { ...row, ...patch };
-          // Si cambió la columna, actualizar title y type automáticamente
           if (patch.columnId) {
             const col = allColumns.find((c) => c.id === patch.columnId);
             if (col) {
@@ -45,12 +45,14 @@ export function useMapping(columns: BoardColumn[]) {
           return updated;
         }),
       );
+      setSaveSuccess(false);
     },
     [],
   );
 
   const removeRow = useCallback((index: number) => {
     setMappings((prev) => prev.filter((_, i) => i !== index));
+    setSaveSuccess(false);
   }, []);
 
   const isValid = mappings.filter((m) => m.apiField && m.columnId).length >= MIN_MAPPINGS;
@@ -58,10 +60,12 @@ export function useMapping(columns: BoardColumn[]) {
   const persist = useCallback(async () => {
     setSaving(true);
     setSaveError(null);
+    setSaveSuccess(false);
     try {
       const validMappings = mappings.filter((m) => m.apiField && m.columnId);
       const config: MappingConfig = { mappings: validMappings };
       await saveMapping(config);
+      setSaveSuccess(true);
     } catch {
       setSaveError('No se pudo guardar la configuración');
     } finally {
@@ -69,5 +73,5 @@ export function useMapping(columns: BoardColumn[]) {
     }
   }, [mappings]);
 
-  return { mappings, loading, saving, saveError, isValid, addRow, updateRow, removeRow, persist };
+  return { mappings, loading, saving, saveError, saveSuccess, isValid, addRow, updateRow, removeRow, persist };
 }

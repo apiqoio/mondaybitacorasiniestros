@@ -5,7 +5,6 @@ const monday = mondaySdk();
 
 /**
  * Consulta la API externa de siniestros vía el backend proxy.
- * Envía los parámetros de búsqueda como query string.
  */
 export async function consultarSiniestro(
   params: SearchParams,
@@ -45,10 +44,13 @@ export async function consultarSiniestro(
  */
 function formatColumnValue(value: string, columnType: string): string {
   switch (columnType) {
-    case 'date':
-      return JSON.stringify({ date: value }); // Asume 'YYYY-MM-DD'
+    case 'date': {
+      // Extraer solo YYYY-MM-DD de fechas ISO o datetime strings
+      const dateMatch = value.match(/\d{4}-\d{2}-\d{2}/);
+      return JSON.stringify({ date: dateMatch ? dateMatch[0] : value });
+    }
     case 'numbers':
-      return JSON.stringify(String(Number(value)));
+      return JSON.stringify(String(Number(value) || 0));
     case 'status':
       return JSON.stringify({ label: value });
     case 'text':
@@ -59,7 +61,6 @@ function formatColumnValue(value: string, columnType: string): string {
 
 /**
  * Escribe los valores mapeados en las columnas del ítem usando la API de Monday.
- * Escribe campo por campo para continuar aunque uno falle.
  */
 export async function escribirCampos(
   boardId: string,
@@ -71,8 +72,8 @@ export async function escribirCampos(
   let errores = 0;
 
   for (const mapping of mappings) {
-    const rawValue = apiData[mapping.apiField as keyof SiniestroApiResponse];
-    if (rawValue === undefined || rawValue === null || rawValue === '') continue;
+    const rawValue = apiData[mapping.apiField];
+    if (rawValue === undefined || rawValue === null || String(rawValue).trim() === '') continue;
 
     const columnValue = formatColumnValue(String(rawValue), mapping.columnType);
 

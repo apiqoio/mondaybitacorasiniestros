@@ -1,6 +1,5 @@
 import React from 'react';
-import { Button, Loader, Text, AlertBanner, AlertBannerText } from '@vibe/core';
-import { Add } from '@vibe/icons';
+import { Button, Loader } from '@vibe/core';
 import { MappingRow } from './MappingRow';
 import { useMapping, MIN_MAPPINGS } from '../hooks/useMapping';
 import type { BoardColumn } from '../hooks/useMondayContext';
@@ -11,84 +10,83 @@ interface Props {
 }
 
 export function ConfigTab({ columns }: Props) {
-  const { mappings, loading, saving, saveError, isValid, addRow, updateRow, removeRow, persist } =
+  const { mappings, loading, saving, saveError, saveSuccess, isValid, addRow, updateRow, removeRow, persist } =
     useMapping(columns);
 
   const usedApiFields = mappings.map((m) => m.apiField).filter(Boolean);
   const usedColumnIds = mappings.map((m) => m.columnId).filter(Boolean);
+  const validCount = mappings.filter((m) => m.apiField && m.columnId).length;
 
   if (loading) {
     return (
-      <div style={{ display: 'flex', justifyContent: 'center', padding: '32px' }}>
+      <div className="spinner-center">
         <Loader size="medium" />
       </div>
     );
   }
 
   return (
-    <div style={{ padding: '16px', maxWidth: '700px' }}>
-      <Text element="h2" weight="bold">
-        Configuración de Mapeo
-      </Text>
-      <Text
-        type="text2"
-        color="secondary"
-        style={{ marginBottom: '16px', display: 'block' }}
-      >
+    <div className="section">
+      <h2 className="section-title">Configuración de Mapeo</h2>
+      <p className="section-subtitle">
         Asocia cada campo de la API con una columna del tablero. Se requieren al menos{' '}
-        {MIN_MAPPINGS} mapeos para habilitar el botón.
-      </Text>
+        {MIN_MAPPINGS} mapeos.
+      </p>
 
-      {/* Encabezados */}
-      {mappings.length > 0 && (
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: '1fr 1fr auto',
-            gap: '8px',
-            paddingBottom: '4px',
-            borderBottom: '2px solid var(--primary-color)',
-          }}
-        >
-          <Text weight="bold">Campo de la API</Text>
-          <Text weight="bold">Columna del tablero</Text>
-          <span />
+      {/* Status bar */}
+      <div style={{ display: 'flex', gap: 8, marginBottom: 16, alignItems: 'center' }}>
+        <span className={`badge ${validCount >= MIN_MAPPINGS ? 'badge-success' : 'badge-warning'}`}>
+          {validCount} mapeo{validCount !== 1 ? 's' : ''} configurado{validCount !== 1 ? 's' : ''}
+        </span>
+        {validCount < MIN_MAPPINGS && (
+          <span style={{ fontSize: 12, color: 'var(--monday-text-secondary)' }}>
+            — faltan {MIN_MAPPINGS - validCount} para habilitar
+          </span>
+        )}
+      </div>
+
+      {/* Mapping table */}
+      {mappings.length > 0 ? (
+        <table className="mapping-table">
+          <thead>
+            <tr>
+              <th>Campo de la API</th>
+              <th>Columna del Tablero</th>
+              <th style={{ width: 48 }}></th>
+            </tr>
+          </thead>
+          <tbody>
+            {mappings.map((row, i) => (
+              <MappingRow
+                key={i}
+                row={row}
+                index={i}
+                columns={columns}
+                usedApiFields={usedApiFields}
+                usedColumnIds={usedColumnIds}
+                onChange={(idx, patch, cols) => updateRow(idx, patch as Partial<MappingEntry>, cols)}
+                onRemove={removeRow}
+              />
+            ))}
+          </tbody>
+        </table>
+      ) : (
+        <div className="card">
+          <div className="empty-state">
+            <div className="empty-state-icon">🔗</div>
+            <div style={{ fontWeight: 600, marginBottom: 4 }}>Sin mapeos configurados</div>
+            <div style={{ fontSize: 13 }}>
+              Agrega al menos {MIN_MAPPINGS} mapeos para habilitar la consulta.
+            </div>
+          </div>
         </div>
       )}
 
-      {/* Filas de mapeo */}
-      {mappings.map((row, i) => (
-        <MappingRow
-          key={i}
-          row={row}
-          index={i}
-          columns={columns}
-          usedApiFields={usedApiFields}
-          usedColumnIds={usedColumnIds}
-          onChange={(idx, patch, cols) => updateRow(idx, patch as Partial<MappingEntry>, cols)}
-          onRemove={removeRow}
-        />
-      ))}
-
-      {mappings.length === 0 && (
-        <Text
-          color="secondary"
-          style={{ display: 'block', textAlign: 'center', padding: '24px 0' }}
-        >
-          Sin mapeos configurados. Agrega al menos {MIN_MAPPINGS}.
-        </Text>
-      )}
-
-      {/* Acciones */}
-      <div style={{ display: 'flex', gap: '8px', marginTop: '16px', alignItems: 'center' }}>
-        <Button
-          kind="tertiary"
-          leftIcon={Add}
-          onClick={addRow}
-          size="small"
-        >
-          Agregar campo
-        </Button>
+      {/* Actions */}
+      <div className="actions-bar">
+        <button type="button" className="btn-secondary" onClick={addRow}>
+          + Agregar campo
+        </button>
 
         <Button
           disabled={!isValid || saving}
@@ -98,19 +96,19 @@ export function ConfigTab({ columns }: Props) {
         >
           Guardar configuración
         </Button>
-
-        {!isValid && mappings.length > 0 && (
-          <Text color="secondary" type="text2">
-            Se necesitan al menos {MIN_MAPPINGS} mapeos completos
-          </Text>
-        )}
       </div>
 
       {saveError && (
-        <div style={{ marginTop: '12px' }}>
-          <AlertBanner backgroundColor="negative" isCloseHidden>
-            <AlertBannerText text={saveError} />
-          </AlertBanner>
+        <div className="alert-box alert-box-error" style={{ marginTop: 8 }}>
+          <span>✕</span>
+          <div>{saveError}</div>
+        </div>
+      )}
+
+      {saveSuccess && (
+        <div className="alert-box alert-box-success" style={{ marginTop: 8 }}>
+          <span>✓</span>
+          <div>Configuración guardada correctamente</div>
         </div>
       )}
     </div>

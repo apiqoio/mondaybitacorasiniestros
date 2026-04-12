@@ -5,14 +5,12 @@ import { useMondayContext, monday } from './hooks/useMondayContext';
 import { SiniestroTab } from './components/SiniestroTab';
 import { ConfigTab } from './components/ConfigTab';
 
-// ID de la columna que contiene el número de siniestro en el tablero
 const SINIESTRO_COLUMN_ID = 'siniestro__1';
 
 export default function App() {
   const { context, columns, ready } = useMondayContext();
   const [numeroSiniestro, setNumeroSiniestro] = useState<string | null>(null);
 
-  // Leer el valor del número de siniestro del ítem actual
   useEffect(() => {
     if (!context?.boardId || !context?.itemId) return;
 
@@ -34,39 +32,44 @@ export default function App() {
 
   if (!ready || !context) {
     return (
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'center',
-          alignItems: 'center',
-          height: '100vh',
-        }}
-      >
+      <div className="spinner-center" style={{ height: '100vh' }}>
         <Loader size="medium" />
       </div>
     );
   }
 
-  // Solo admins ven la pestaña de configuración
-  if (context.isAdmin) {
-    return (
-      <TabsContext>
-        <TabList>
-          <Tab>Siniestro</Tab>
-          <Tab icon={Settings}>Configuración</Tab>
-        </TabList>
-        <TabPanels>
-          <TabPanel>
-            <SiniestroTab context={context} numeroSiniestro={numeroSiniestro} />
-          </TabPanel>
-          <TabPanel>
-            <ConfigTab columns={columns} />
-          </TabPanel>
-        </TabPanels>
-      </TabsContext>
-    );
-  }
+  return (
+    <div className="app-shell">
+      {/* Header */}
+      <div className="app-header">
+        <div className="app-header-icon">BS</div>
+        <div>
+          <div className="app-header-title">Bitácora Siniestros</div>
+          <div className="app-header-subtitle">Consulta y mapeo de datos de siniestros</div>
+        </div>
+      </div>
 
-  // Usuarios regulares solo ven la pestaña de siniestro
-  return <SiniestroTab context={context} numeroSiniestro={numeroSiniestro} />;
+      {/* Content */}
+      {context.isAdmin ? (
+        <TabsContext>
+          <div className="monday-tabs">
+            <TabList>
+              <Tab>Siniestro</Tab>
+              <Tab icon={Settings}>Configuración</Tab>
+            </TabList>
+          </div>
+          <TabPanels>
+            <TabPanel>
+              <SiniestroTab context={context} numeroSiniestro={numeroSiniestro} />
+            </TabPanel>
+            <TabPanel>
+              <ConfigTab columns={columns} />
+            </TabPanel>
+          </TabPanels>
+        </TabsContext>
+      ) : (
+        <SiniestroTab context={context} numeroSiniestro={numeroSiniestro} />
+      )}
+    </div>
+  );
 }

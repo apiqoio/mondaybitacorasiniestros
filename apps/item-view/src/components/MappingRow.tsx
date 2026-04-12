@@ -1,6 +1,5 @@
 import React from 'react';
-import { Dropdown, IconButton } from '@vibe/core';
-import { Delete } from '@vibe/icons';
+import { Dropdown } from '@vibe/core';
 import { API_FIELDS } from '@shared/types';
 import type { MappingEntry } from '@shared/types';
 import type { BoardColumn } from '../hooks/useMondayContext';
@@ -24,9 +23,11 @@ export function MappingRow({
   onChange,
   onRemove,
 }: Props) {
+  // Group API field options by category
   const apiOptions = API_FIELDS.map((f) => ({
     value: f.key,
-    label: f.label,
+    label: `${f.label}`,
+    leftAvatar: f.group,
     isDisabled: f.key !== row.apiField && usedApiFields.includes(f.key),
   }));
 
@@ -40,41 +41,41 @@ export function MappingRow({
   const selectedCol = columnOptions.find((o) => o.value === row.columnId) ?? undefined;
 
   return (
-    <div
-      style={{
-        display: 'grid',
-        gridTemplateColumns: '1fr 1fr auto',
-        gap: '8px',
-        alignItems: 'center',
-        padding: '8px 0',
-        borderBottom: '1px solid var(--ui-border-color)',
-      }}
-    >
-      <Dropdown
-        placeholder="Campo de la API"
-        options={apiOptions}
-        value={selectedApi}
-        onChange={(opt: any) =>
-          onChange(index, { apiField: opt?.value as MappingEntry['apiField'] }, columns)
-        }
-        size="small"
-      />
-      <Dropdown
-        placeholder="Columna del tablero"
-        options={columnOptions}
-        value={selectedCol}
-        onChange={(opt: any) =>
-          onChange(index, { columnId: opt?.value ?? '' }, columns)
-        }
-        size="small"
-      />
-      <IconButton
-        icon={Delete}
-        kind="tertiary"
-        size="small"
-        onClick={() => onRemove(index)}
-        aria-label="Eliminar mapeo"
-      />
-    </div>
+    <tr>
+      <td>
+        <Dropdown
+          placeholder="Seleccionar campo..."
+          options={apiOptions}
+          value={selectedApi}
+          onChange={(opt: any) =>
+            onChange(index, { apiField: opt?.value ?? '' }, columns)
+          }
+          size="small"
+          searchable
+        />
+      </td>
+      <td>
+        <Dropdown
+          placeholder="Seleccionar columna..."
+          options={columnOptions}
+          value={selectedCol}
+          onChange={(opt: any) =>
+            onChange(index, { columnId: opt?.value ?? '' }, columns)
+          }
+          size="small"
+          searchable
+        />
+      </td>
+      <td>
+        <button
+          type="button"
+          className="btn-icon"
+          onClick={() => onRemove(index)}
+          title="Eliminar mapeo"
+        >
+          ✕
+        </button>
+      </td>
+    </tr>
   );
 }

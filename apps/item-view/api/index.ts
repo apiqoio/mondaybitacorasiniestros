@@ -39,24 +39,20 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   const baseUrl = process.env.SINIESTROS_API_BASE_URL;
-  const apiToken = process.env.SINIESTROS_API_TOKEN;
-  if (!baseUrl || !apiToken) return res.status(500).json({ error: 'API externa no configurada' });
+  if (!baseUrl) return res.status(500).json({ error: 'API externa no configurada' });
 
+  // Construir query params para el webhook de Make
   const params = new URLSearchParams();
+  if (numeroSiniestro) params.set('siniestro', numeroSiniestro);
   if (oficina) params.set('oficina', oficina);
   if (ramo) params.set('ramo', ramo);
   if (poliza) params.set('poliza', poliza);
-  if (numeroSiniestro) params.set('numeroSiniestro', numeroSiniestro);
   if (filenet) params.set('filenet', filenet);
 
   try {
-    const upstream = await fetch(`${baseUrl}/siniestros?${params.toString()}`, {
-      headers: {
-        Authorization: `Bearer ${apiToken}`,
-        'Content-Type': 'application/json',
-        Accept: 'application/json',
-      },
-      signal: AbortSignal.timeout(10_000),
+    const upstream = await fetch(`${baseUrl}?${params.toString()}`, {
+      headers: { Accept: 'application/json' },
+      signal: AbortSignal.timeout(15_000),
     });
 
     if (upstream.status === 404) return res.status(404).json({ error: 'Siniestro no encontrado' });

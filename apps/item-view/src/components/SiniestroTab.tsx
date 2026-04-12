@@ -1,37 +1,112 @@
 import React, { useEffect, useState } from 'react';
-import { Button, Loader, Text, AttentionBox, TextField } from '@vibe/core';
+import { Button, Loader, TextField } from '@vibe/core';
 import { useSiniestro } from '../hooks/useSiniestro';
 import { loadMapping } from '../services/storage.service';
 import { MIN_MAPPINGS } from '../hooks/useMapping';
+import { API_FIELD_GROUPS } from '@shared/types';
 import type { MondayContextData } from '../hooks/useMondayContext';
-import type { SearchMode, SearchParams } from '@shared/types';
+import type { SearchMode, SearchParams, SiniestroApiResponse } from '@shared/types';
 
 interface Props {
   context: MondayContextData;
   numeroSiniestro: string | null;
 }
 
-const MODES: { value: SearchMode; label: string }[] = [
-  { value: 'poliza', label: 'Oficina / Ramo / Póliza' },
-  { value: 'siniestro', label: 'Número de Siniestro' },
-  { value: 'filenet', label: 'Número de FileNet' },
+const MODES: { value: SearchMode; label: string; icon: string }[] = [
+  { value: 'siniestro', label: 'Siniestro', icon: '🔍' },
+  { value: 'poliza', label: 'Póliza', icon: '📋' },
+  { value: 'filenet', label: 'FileNet', icon: '📁' },
 ];
+
+function DataPreview({ data }: { data: SiniestroApiResponse }) {
+  const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
+
+  const toggle = (group: string) =>
+    setCollapsed((prev) => ({ ...prev, [group]: !prev[group] }));
+
+  // Count non-empty fields per group
+  const groupsWithData = API_FIELD_GROUPS.map((g) => {
+    const fieldsWithValue = g.fields.filter((f) => {
+      const val = data[f.key];
+      return val !== undefined && val !== null && String(val).trim() !== '' && String(val).trim() !== ' ';
+    });
+    return { ...g, fieldsWithValue };
+  }).filter((g) => g.fieldsWithValue.length > 0);
+
+  return (
+    <div className="data-preview">
+      {/* Summary stats */}
+      <div className="stat-row">
+        {data.Siniestro && (
+          <div className="stat-card">
+            <div className="stat-value">{data.Siniestro}</div>
+            <div className="stat-label">Siniestro</div>
+          </div>
+        )}
+        {data.poliza && (
+          <div className="stat-card">
+            <div className="stat-value" style={{ fontSize: 14 }}>{data.poliza}</div>
+            <div className="stat-label">Póliza</div>
+          </div>
+        )}
+        {data.Estado_Poliza && (
+          <div className="stat-card">
+            <div>
+              <span
+                className={`badge ${
+                  String(data.Estado_Poliza).toLowerCase().includes('vigencia')
+                    ? 'badge-success'
+                    : 'badge-warning'
+                }`}
+              >
+                {data.Estado_Poliza}
+              </span>
+            </div>
+            <div className="stat-label" style={{ marginTop: 4 }}>Estado</div>
+          </div>
+        )}
+      </div>
+
+      {groupsWithData.map((g) => (
+        <div className="data-group" key={g.group}>
+          <div className="data-group-header" onClick={() => toggle(g.group)}>
+            <span>
+              {g.group}{' '}
+              <span style={{ fontWeight: 400, fontSize: 11 }}>
+                ({g.fieldsWithValue.length})
+              </span>
+            </span>
+            <span className={`data-group-chevron ${collapsed[g.group] ? 'collapsed' : ''}`}>
+              ▼
+            </span>
+          </div>
+          {!collapsed[g.group] && (
+            <div className="data-group-body">
+              {g.fieldsWithValue.map((f) => (
+                <div className="data-row" key={f.key}>
+                  <span className="data-label">{f.label}</span>
+                  <span className="data-value">{String(data[f.key])}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
 
 export function SiniestroTab({ context, numeroSiniestro }: Props) {
   const { status, data, message, consultar } = useSiniestro();
   const [hasMapping, setHasMapping] = useState<boolean | null>(null);
 
-  // Modo de búsqueda seleccionado
   const [mode, setMode] = useState<SearchMode>('siniestro');
-
-  // Campos por modo
   const [oficina, setOficina] = useState('');
   const [ramo, setRamo] = useState('');
   const [poliza, setPoliza] = useState('');
   const [numSiniestro, setNumSiniestro] = useState('');
   const [numFilenet, setNumFilenet] = useState('');
 
-  // Pre-poblar siniestro si viene del ítem de Monday
   useEffect(() => {
     if (numeroSiniestro) {
       setNumSiniestro(numeroSiniestro);
@@ -39,7 +114,6 @@ export function SiniestroTab({ context, numeroSiniestro }: Props) {
     }
   }, [numeroSiniestro]);
 
-  // Verificar si hay suficientes mapeos configurados
   useEffect(() => {
     loadMapping().then((config) => {
       const count = config?.mappings?.filter((m) => m.apiField && m.columnId).length ?? 0;
@@ -49,13 +123,12 @@ export function SiniestroTab({ context, numeroSiniestro }: Props) {
 
   if (hasMapping === null) {
     return (
-      <div style={{ display: 'flex', justifyContent: 'center', padding: '32px' }}>
+      <div className="spinner-center">
         <Loader size="small" />
       </div>
     );
   }
 
-  // Validar si el formulario actual está completo
   const isFormValid = (() => {
     if (mode === 'poliza') return !!(oficina.trim() && ramo.trim() && poliza.trim());
     if (mode === 'siniestro') return !!numSiniestro.trim();
@@ -81,148 +154,120 @@ export function SiniestroTab({ context, numeroSiniestro }: Props) {
   };
 
   return (
-    <div style={{ padding: '16px' }}>
-      {/* Aviso si no hay configuración */}
+    <div className="section">
+      {/* Warning if no mapping */}
       {!hasMapping && (
-        <div style={{ marginBottom: '16px' }}>
-          <AttentionBox
-            title="Sin configuración"
-            text="No hay mapeo de campos configurado. Un administrador debe configurarlo en la pestaña Configuración."
-            type="warning"
-          />
+        <div className="alert-box alert-box-warning" style={{ marginBottom: 16 }}>
+          <span>⚠️</span>
+          <div>
+            <strong>Sin configuración</strong>
+            <div style={{ marginTop: 2 }}>
+              No hay mapeo de campos configurado. Un administrador debe configurarlo en la pestaña Configuración.
+            </div>
+          </div>
         </div>
       )}
 
-      {/* Selector de modo de búsqueda */}
-      <div style={{ marginBottom: '16px' }}>
-        <Text weight="bold" style={{ marginBottom: '8px', display: 'block' }}>
-          Buscar por
-        </Text>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-          {MODES.map(({ value, label }) => (
-            <label
-              key={value}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                cursor: 'pointer',
-                padding: '8px 12px',
-                borderRadius: '6px',
-                border: `1px solid ${mode === value ? 'var(--primary-color)' : 'var(--ui-border-color)'}`,
-                background: mode === value ? 'var(--primary-selected-color)' : 'transparent',
-                transition: 'all 0.15s ease',
-              }}
-            >
-              <input
-                type="radio"
-                name="searchMode"
-                value={value}
-                checked={mode === value}
-                onChange={() => setMode(value)}
-                style={{ accentColor: 'var(--primary-color)', width: '16px', height: '16px' }}
+      {/* Search card */}
+      <div className="card">
+        <div className="card-header">
+          <span style={{ fontWeight: 600, fontSize: 14 }}>Buscar Siniestro</span>
+          {status === 'loading' && <Loader size={20} />}
+        </div>
+        <div className="card-body">
+          {/* Mode selector */}
+          <div className="search-mode-group">
+            {MODES.map(({ value, label, icon }) => (
+              <button
+                key={value}
+                type="button"
+                className={`search-mode-btn ${mode === value ? 'active' : ''}`}
+                onClick={() => setMode(value)}
+              >
+                {icon} {label}
+              </button>
+            ))}
+          </div>
+
+          {/* Search fields */}
+          <div className="search-form">
+            {mode === 'poliza' && (
+              <div className="search-row">
+                <TextField
+                  title="Oficina"
+                  placeholder="Ej. 4"
+                  value={oficina}
+                  onChange={(val: string) => setOficina(val)}
+                  size="small"
+                />
+                <TextField
+                  title="Ramo"
+                  placeholder="Ej. 211"
+                  value={ramo}
+                  onChange={(val: string) => setRamo(val)}
+                  size="small"
+                />
+                <TextField
+                  title="Póliza"
+                  placeholder="Ej. 116406"
+                  value={poliza}
+                  onChange={(val: string) => setPoliza(val)}
+                  size="small"
+                />
+              </div>
+            )}
+
+            {mode === 'siniestro' && (
+              <TextField
+                title="Número de Siniestro"
+                placeholder="Ej. 507"
+                value={numSiniestro}
+                onChange={(val: string) => setNumSiniestro(val)}
+                size="small"
               />
-              <Text>{label}</Text>
-            </label>
-          ))}
+            )}
+
+            {mode === 'filenet' && (
+              <TextField
+                title="Número de FileNet"
+                placeholder="Ej. 3657807"
+                value={numFilenet}
+                onChange={(val: string) => setNumFilenet(val)}
+                size="small"
+              />
+            )}
+
+            <div>
+              <Button
+                disabled={!canConsult || status === 'loading'}
+                loading={status === 'loading'}
+                onClick={handleConsultar}
+                size="small"
+              >
+                Consultar y Poblar
+              </Button>
+            </div>
+          </div>
         </div>
       </div>
 
-      {/* Campos del modo seleccionado */}
-      <div style={{ marginBottom: '16px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-        {mode === 'poliza' && (
-          <>
-            <TextField
-              title="Oficina *"
-              placeholder="Código de oficina"
-              value={oficina}
-              onChange={(val: string) => setOficina(val)}
-            />
-            <TextField
-              title="Ramo *"
-              placeholder="Código de ramo"
-              value={ramo}
-              onChange={(val: string) => setRamo(val)}
-            />
-            <TextField
-              title="Póliza *"
-              placeholder="Número de póliza"
-              value={poliza}
-              onChange={(val: string) => setPoliza(val)}
-            />
-            <Text type="text2" color="secondary">
-              Los tres campos son obligatorios para esta búsqueda.
-            </Text>
-          </>
-        )}
-
-        {mode === 'siniestro' && (
-          <TextField
-            title="Número de Siniestro *"
-            placeholder="Ej. 123456789"
-            value={numSiniestro}
-            onChange={(val: string) => setNumSiniestro(val)}
-          />
-        )}
-
-        {mode === 'filenet' && (
-          <TextField
-            title="Número de FileNet *"
-            placeholder="Ej. FN-000123"
-            value={numFilenet}
-            onChange={(val: string) => setNumFilenet(val)}
-          />
-        )}
-      </div>
-
-      {/* Botón principal */}
-      <Button
-        disabled={!canConsult || status === 'loading'}
-        loading={status === 'loading'}
-        onClick={handleConsultar}
-        size="medium"
-      >
-        Consultar y Poblar Datos
-      </Button>
-
-      {/* Resultado */}
+      {/* Results */}
       {status === 'success' && message && (
-        <div style={{ marginTop: '16px' }}>
-          <AttentionBox title="Completado" text={message} type="positive" />
+        <div className="alert-box alert-box-success" style={{ marginTop: 16 }}>
+          <span>✓</span>
+          <div>{message}</div>
         </div>
       )}
 
       {status === 'error' && message && (
-        <div style={{ marginTop: '16px' }}>
-          <AttentionBox title="Error" text={message} type="negative" />
+        <div className="alert-box alert-box-error" style={{ marginTop: 16 }}>
+          <span>✕</span>
+          <div>{message}</div>
         </div>
       )}
 
-      {/* Vista previa de datos obtenidos */}
-      {data && (
-        <div
-          style={{
-            marginTop: '16px',
-            padding: '12px',
-            background: 'var(--primary-background-hover-color)',
-            borderRadius: '8px',
-          }}
-        >
-          <Text weight="bold" style={{ marginBottom: '8px' }}>
-            Datos recibidos de la API
-          </Text>
-          {Object.entries(data)
-            .filter(([, v]) => v !== '' && v !== null)
-            .map(([key, value]) => (
-              <div key={key} style={{ display: 'flex', gap: '8px', padding: '2px 0' }}>
-                <Text type="text2" color="secondary" style={{ minWidth: '180px' }}>
-                  {key}
-                </Text>
-                <Text type="text2">{String(value)}</Text>
-              </div>
-            ))}
-        </div>
-      )}
+      {/* Data preview */}
+      {data && <DataPreview data={data} />}
     </div>
   );
 }

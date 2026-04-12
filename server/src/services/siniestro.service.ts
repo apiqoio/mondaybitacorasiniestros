@@ -2,7 +2,6 @@ import { SiniestroApiResponse } from '../../../shared/types';
 import { logger } from '../utils/logger';
 
 const BASE_URL = process.env.SINIESTROS_API_BASE_URL!;
-const API_TOKEN = process.env.SINIESTROS_API_TOKEN!;
 
 interface FetchParams {
   oficina?: string;
@@ -13,29 +12,30 @@ interface FetchParams {
 }
 
 /**
- * Consulta la API externa de siniestros con los parámetros de búsqueda.
- * Envía los parámetros como query string según la opción seleccionada.
+ * Consulta la API externa de siniestros (Make webhook).
+ * El webhook recibe los parámetros directamente como query string.
  */
 export async function fetchSiniestro(
   params: FetchParams,
 ): Promise<SiniestroApiResponse> {
   const queryParams = new URLSearchParams();
+
+  if (params.numeroSiniestro) {
+    queryParams.set('siniestro', params.numeroSiniestro);
+  }
   if (params.oficina) queryParams.set('oficina', params.oficina);
   if (params.ramo) queryParams.set('ramo', params.ramo);
   if (params.poliza) queryParams.set('poliza', params.poliza);
-  if (params.numeroSiniestro) queryParams.set('numeroSiniestro', params.numeroSiniestro);
   if (params.filenet) queryParams.set('filenet', params.filenet);
 
-  const url = `${BASE_URL}/siniestros?${queryParams.toString()}`;
+  const url = `${BASE_URL}?${queryParams.toString()}`;
 
   const res = await fetch(url, {
     method: 'GET',
     headers: {
-      'Authorization': `Bearer ${API_TOKEN}`,
-      'Content-Type': 'application/json',
       'Accept': 'application/json',
     },
-    signal: AbortSignal.timeout(10_000),
+    signal: AbortSignal.timeout(15_000),
   });
 
   if (res.status === 404) {
