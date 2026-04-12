@@ -40,12 +40,12 @@ export async function consultarSiniestro(
 }
 
 /**
- * Formatea el valor del API al formato que espera Monday según el tipo de columna.
+ * Formatea el valor del API al formato JSON que espera Monday según el tipo de columna.
+ * Retorna un string con JSON válido.
  */
 function formatColumnValue(value: string, columnType: string): string {
   switch (columnType) {
     case 'date': {
-      // Extraer solo YYYY-MM-DD de fechas ISO o datetime strings
       const dateMatch = value.match(/\d{4}-\d{2}-\d{2}/);
       return JSON.stringify({ date: dateMatch ? dateMatch[0] : value });
     }
@@ -53,6 +53,9 @@ function formatColumnValue(value: string, columnType: string): string {
       return JSON.stringify(String(Number(value) || 0));
     case 'status':
       return JSON.stringify({ label: value });
+    case 'long_text':
+    case 'long-text':
+      return JSON.stringify({ text: value });
     case 'text':
     default:
       return JSON.stringify(value);
@@ -61,29 +64,36 @@ function formatColumnValue(value: string, columnType: string): string {
 
 /**
  * Escribe los valores mapeados en las columnas del ítem usando la API de Monday.
+ *
+ * Monday's change_column_value expects `value` to be a GraphQL String
+ * containing valid JSON. We must double-encode: formatColumnValue produces
+ * the JSON, then JSON.stringify wraps it as a GraphQL string literal.
  */
 export async function escribirCampos(
   boardId: string,
   itemId: string,
   apiData: SiniestroApiResponse,
   mappings: MappingEntry[],
-): Promise<{ ok: number; errores: number }> {
+): Promise<{ ok: number; errores: number; detalles: string[] }> {
   let ok = 0;
   let errores = 0;
+  const detalles: string[] = [];
 
   for (const mapping of mappings) {
     const rawValue = apiData[mapping.apiField];
     if (rawValue === undefined || rawValue === null || String(rawValue).trim() === '') continue;
 
-    const columnValue = formatColumnValue(String(rawValue), mapping.columnType);
+    // formatColumnValue returns valid JSON (e.g. '"text"' or '{"date":"2024-01-01"}')
+    const jsonValue = formatColumnValue(String(rawValue), mapping.columnType);
 
+    // JSON.stringify wraps the JSON as a properly escaped GraphQL string literal
     const mutation = `
       mutation {
         change_column_value(
           board_id: ${boardId},
           item_id: ${itemId},
           column_id: "${mapping.columnId}",
-          value: ${columnValue}
+          value: ${JSON.stringify(jsonValue)}
         ) { id }
       }
     `;
@@ -92,14 +102,17 @@ export async function escribirCampos(
       const result = await monday.api(mutation) as any;
       if (result.errors?.length) {
         console.error(`Error en columna ${mapping.columnId}:`, result.errors);
+        detalles.push(`${mapping.columnTitle}: ${result.errors[0]?.message ?? 'Error'}`);
         errores++;
       } else {
+        detalles.push(`${mapping.columnTitle}: ✓`);
         ok++;
       }
-    } catch {
+    } catch (err: any) {
+      detalles.push(`${mapping.columnTitle}: ${err?.message ?? 'Error'}`);
       errores++;
     }
   }
 
-  return { ok, errores };
+  return { ok, errores, detalles };
 }

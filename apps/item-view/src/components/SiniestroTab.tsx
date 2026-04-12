@@ -1,8 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Button, Loader, TextField } from '@vibe/core';
 import { useSiniestro } from '../hooks/useSiniestro';
-import { loadMapping } from '../services/storage.service';
-import { MIN_MAPPINGS } from '../hooks/useMapping';
 import { API_FIELD_GROUPS } from '@shared/types';
 import type { MondayContextData } from '../hooks/useMondayContext';
 import type { SearchMode, SearchParams, SiniestroApiResponse } from '@shared/types';
@@ -24,7 +22,6 @@ function DataPreview({ data }: { data: SiniestroApiResponse }) {
   const toggle = (group: string) =>
     setCollapsed((prev) => ({ ...prev, [group]: !prev[group] }));
 
-  // Count non-empty fields per group
   const groupsWithData = API_FIELD_GROUPS.map((g) => {
     const fieldsWithValue = g.fields.filter((f) => {
       const val = data[f.key];
@@ -97,8 +94,17 @@ function DataPreview({ data }: { data: SiniestroApiResponse }) {
 }
 
 export function SiniestroTab({ context, numeroSiniestro }: Props) {
-  const { status, data, message, consultar } = useSiniestro();
-  const [hasMapping, setHasMapping] = useState<boolean | null>(null);
+  const {
+    fetchStatus,
+    writeStatus,
+    data,
+    message,
+    writeMessage,
+    writeDetalles,
+    mappings,
+    consultar,
+    poblar,
+  } = useSiniestro();
 
   const [mode, setMode] = useState<SearchMode>('siniestro');
   const [oficina, setOficina] = useState('');
@@ -114,21 +120,6 @@ export function SiniestroTab({ context, numeroSiniestro }: Props) {
     }
   }, [numeroSiniestro]);
 
-  useEffect(() => {
-    loadMapping().then((config) => {
-      const count = config?.mappings?.filter((m) => m.apiField && m.columnId).length ?? 0;
-      setHasMapping(count >= MIN_MAPPINGS);
-    });
-  }, []);
-
-  if (hasMapping === null) {
-    return (
-      <div className="spinner-center">
-        <Loader size="small" />
-      </div>
-    );
-  }
-
   const isFormValid = (() => {
     if (mode === 'poliza') return !!(oficina.trim() && ramo.trim() && poliza.trim());
     if (mode === 'siniestro') return !!numSiniestro.trim();
@@ -136,10 +127,8 @@ export function SiniestroTab({ context, numeroSiniestro }: Props) {
     return false;
   })();
 
-  const canConsult = hasMapping && isFormValid;
-
   const handleConsultar = () => {
-    if (!canConsult) return;
+    if (!isFormValid) return;
 
     let params: SearchParams;
     if (mode === 'poliza') {
@@ -150,29 +139,22 @@ export function SiniestroTab({ context, numeroSiniestro }: Props) {
       params = { mode: 'filenet', filenet: numFilenet.trim() };
     }
 
-    consultar(context.boardId, context.itemId, params);
+    consultar(params);
   };
+
+  const handlePoblar = () => {
+    poblar(context.boardId, context.itemId);
+  };
+
+  const hasMappings = mappings.length >= 2;
 
   return (
     <div className="section">
-      {/* Warning if no mapping */}
-      {!hasMapping && (
-        <div className="alert-box alert-box-warning" style={{ marginBottom: 16 }}>
-          <span>⚠️</span>
-          <div>
-            <strong>Sin configuración</strong>
-            <div style={{ marginTop: 2 }}>
-              No hay mapeo de campos configurado. Un administrador debe configurarlo en la pestaña Configuración.
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* Search card */}
       <div className="card">
         <div className="card-header">
           <span style={{ fontWeight: 600, fontSize: 14 }}>Buscar Siniestro</span>
-          {status === 'loading' && <Loader size={20} />}
+          {fetchStatus === 'loading' && <Loader size={20} />}
         </div>
         <div className="card-body">
           {/* Mode selector */}
@@ -239,35 +221,102 @@ export function SiniestroTab({ context, numeroSiniestro }: Props) {
 
             <div>
               <Button
-                disabled={!canConsult || status === 'loading'}
-                loading={status === 'loading'}
+                disabled={!isFormValid || fetchStatus === 'loading'}
+                loading={fetchStatus === 'loading'}
                 onClick={handleConsultar}
                 size="small"
               >
-                Consultar y Poblar
+                Consultar
               </Button>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Results */}
-      {status === 'success' && message && (
-        <div className="alert-box alert-box-success" style={{ marginTop: 16 }}>
-          <span>✓</span>
-          <div>{message}</div>
-        </div>
-      )}
-
-      {status === 'error' && message && (
+      {/* Fetch error */}
+      {fetchStatus === 'error' && message && (
         <div className="alert-box alert-box-error" style={{ marginTop: 16 }}>
           <span>✕</span>
           <div>{message}</div>
         </div>
       )}
 
-      {/* Data preview */}
-      {data && <DataPreview data={data} />}
+      {/* Data preview + Populate button */}
+      {data && fetchStatus === 'loaded' && (
+        <>
+          <DataPreview data={data} />
+
+          {/* Populate action */}
+          <div className="card" style={{ marginTop: 16 }}>
+            <div className="card-header">
+              <span style={{ fontWeight: 600, fontSize: 14 }}>Actualizar Tablero</span>
+              {hasMappings && (
+                <span className="badge badge-info">
+                  {mappings.length} campo{mappings.length !== 1 ? 's' : ''} mapeado{mappings.length !== 1 ? 's' : ''}
+                </span>
+              )}
+            </div>
+            <div className="card-body">
+              {!hasMappings ? (
+                <div className="alert-box alert-box-warning">
+                  <span>⚠️</span>
+                  <div>
+                    No hay mapeo de campos configurado. Un administrador debe configurarlo en la pestaña <strong>Configuración</strong>.
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <p style={{ margin: '0 0 12px', fontSize: 13, color: 'var(--monday-text-secondary)' }}>
+                    Revisa la información arriba. Al confirmar, se actualizarán los campos mapeados en el tablero.
+                  </p>
+                  <Button
+                    disabled={writeStatus === 'writing'}
+                    loading={writeStatus === 'writing'}
+                    onClick={handlePoblar}
+                    size="small"
+                    color="positive"
+                  >
+                    Confirmar y Actualizar Campos
+                  </Button>
+                </>
+              )}
+
+              {/* Write results */}
+              {writeStatus === 'success' && writeMessage && (
+                <div className="alert-box alert-box-success" style={{ marginTop: 12 }}>
+                  <span>✓</span>
+                  <div>
+                    <strong>{writeMessage}</strong>
+                    {writeDetalles.length > 0 && (
+                      <div style={{ marginTop: 6, fontSize: 12 }}>
+                        {writeDetalles.map((d, i) => (
+                          <div key={i}>{d}</div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {writeStatus === 'error' && writeMessage && (
+                <div className="alert-box alert-box-error" style={{ marginTop: 12 }}>
+                  <span>✕</span>
+                  <div>
+                    <strong>{writeMessage}</strong>
+                    {writeDetalles.length > 0 && (
+                      <div style={{ marginTop: 6, fontSize: 12 }}>
+                        {writeDetalles.map((d, i) => (
+                          <div key={i}>{d}</div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </>
+      )}
     </div>
   );
 }

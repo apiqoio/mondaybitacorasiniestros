@@ -49,27 +49,23 @@ export default function App() {
         </div>
       </div>
 
-      {/* Content */}
-      {context.isAdmin ? (
-        <TabsContext>
-          <div className="monday-tabs">
-            <TabList>
-              <Tab>Siniestro</Tab>
-              <Tab icon={Settings}>Configuración</Tab>
-            </TabList>
-          </div>
-          <TabPanels>
-            <TabPanel>
-              <SiniestroTab context={context} numeroSiniestro={numeroSiniestro} />
-            </TabPanel>
-            <TabPanel>
-              <ConfigTab columns={columns} />
-            </TabPanel>
-          </TabPanels>
-        </TabsContext>
-      ) : (
-        <SiniestroTab context={context} numeroSiniestro={numeroSiniestro} />
-      )}
+      {/* Content — always show both tabs */}
+      <TabsContext>
+        <div className="monday-tabs">
+          <TabList>
+            <Tab>Siniestro</Tab>
+            <Tab icon={Settings}>Configuración</Tab>
+          </TabList>
+        </div>
+        <TabPanels>
+          <TabPanel>
+            <SiniestroTab context={context} numeroSiniestro={numeroSiniestro} />
+          </TabPanel>
+          <TabPanel>
+            <ConfigTab columns={columns} />
+          </TabPanel>
+        </TabPanels>
+      </TabsContext>
     </div>
   );
 }
