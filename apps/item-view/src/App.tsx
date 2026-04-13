@@ -52,12 +52,10 @@ export default function App() {
       {/* Content — Config tab only for admins */}
       {context.isAdmin ? (
         <TabsContext>
-          <div className="monday-tabs">
-            <TabList>
-              <Tab>Siniestro</Tab>
-              <Tab icon={Settings}>Configuración</Tab>
-            </TabList>
-          </div>
+          <TabList className="monday-tabs">
+            <Tab>Siniestro</Tab>
+            <Tab icon={Settings}>Configuración</Tab>
+          </TabList>
           <TabPanels>
             <TabPanel>
               <SiniestroTab context={context} numeroSiniestro={numeroSiniestro} />
