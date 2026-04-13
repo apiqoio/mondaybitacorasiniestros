@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Loader, TabList, Tab, TabPanels, TabPanel, TabsContext } from '@vibe/core';
-import { Settings } from '@vibe/icons';
+import { Loader } from '@vibe/core';
 import { useMondayContext, monday } from './hooks/useMondayContext';
 import { SiniestroTab } from './components/SiniestroTab';
 import { ConfigTab } from './components/ConfigTab';
@@ -49,24 +48,14 @@ export default function App() {
         </div>
       </div>
 
-      {/* Content — Config tab only for admins */}
-      {context.isAdmin ? (
-        <TabsContext>
-          <TabList className="monday-tabs">
-            <Tab>Siniestro</Tab>
-            <Tab icon={Settings}>Configuración</Tab>
-          </TabList>
-          <TabPanels>
-            <TabPanel>
-              <SiniestroTab context={context} numeroSiniestro={numeroSiniestro} />
-            </TabPanel>
-            <TabPanel>
-              <ConfigTab columns={columns} />
-            </TabPanel>
-          </TabPanels>
-        </TabsContext>
-      ) : (
-        <SiniestroTab context={context} numeroSiniestro={numeroSiniestro} />
+      {/* Siniestro — visible for all users */}
+      <SiniestroTab context={context} numeroSiniestro={numeroSiniestro} />
+
+      {/* Configuración — only for board owners */}
+      {context.isAdmin && (
+        <div style={{ borderTop: '1px solid var(--monday-border, #d0d4e4)', marginTop: 16, paddingTop: 8 }}>
+          <ConfigTab columns={columns} />
+        </div>
       )}
     </div>
   );
