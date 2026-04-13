@@ -23,59 +23,60 @@ export function MappingRow({
   onChange,
   onRemove,
 }: Props) {
-  // Group API field options by category
   const apiOptions = API_FIELDS.map((f) => ({
     value: f.key,
-    label: `${f.label}`,
-    leftAvatar: f.group,
-    isDisabled: f.key !== row.apiField && usedApiFields.includes(f.key),
+    label: `${f.label} (${f.group})`,
+    disabled: f.key !== row.apiField && usedApiFields.includes(f.key),
   }));
 
   const columnOptions = columns.map((c) => ({
     value: c.id,
     label: `${c.title} (${c.type})`,
-    isDisabled: c.id !== row.columnId && usedColumnIds.includes(c.id),
+    disabled: c.id !== row.columnId && usedColumnIds.includes(c.id),
   }));
 
   const selectedApi = apiOptions.find((o) => o.value === row.apiField) ?? undefined;
   const selectedCol = columnOptions.find((o) => o.value === row.columnId) ?? undefined;
 
   return (
-    <tr>
-      <td>
-        <Dropdown
-          placeholder="Seleccionar campo..."
-          options={apiOptions}
-          value={selectedApi}
-          onChange={(opt: any) =>
-            onChange(index, { apiField: opt?.value ?? '' }, columns)
-          }
-          size="small"
-          searchable
-        />
-      </td>
-      <td>
-        <Dropdown
-          placeholder="Seleccionar columna..."
-          options={columnOptions}
-          value={selectedCol}
-          onChange={(opt: any) =>
-            onChange(index, { columnId: opt?.value ?? '' }, columns)
-          }
-          size="small"
-          searchable
-        />
-      </td>
-      <td>
-        <button
-          type="button"
-          className="btn-icon"
-          onClick={() => onRemove(index)}
-          title="Eliminar mapeo"
-        >
-          ✕
-        </button>
-      </td>
-    </tr>
+    <div
+      style={{
+        display: 'grid',
+        gridTemplateColumns: '1fr 1fr 40px',
+        gap: 8,
+        alignItems: 'center',
+        padding: '8px 0',
+        borderBottom: '1px solid var(--monday-border, #d0d4e4)',
+      }}
+    >
+      <Dropdown
+        placeholder="Campo de la API..."
+        options={apiOptions}
+        value={selectedApi}
+        onChange={(opt: any) =>
+          onChange(index, { apiField: opt?.value ?? '' }, columns)
+        }
+        size="small"
+        searchable
+      />
+      <Dropdown
+        placeholder="Columna del tablero..."
+        options={columnOptions}
+        value={selectedCol}
+        onChange={(opt: any) =>
+          onChange(index, { columnId: opt?.value ?? '' }, columns)
+        }
+        size="small"
+        searchable
+      />
+      <button
+        type="button"
+        className="btn-icon"
+        onClick={() => onRemove(index)}
+        title="Eliminar mapeo"
+      >
+        ✕
+      </button>
+    </div>
   );
 }

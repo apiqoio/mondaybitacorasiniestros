@@ -45,32 +45,43 @@ export function ConfigTab({ columns }: Props) {
         )}
       </div>
 
-      {/* Mapping table */}
-      {mappings.length > 0 ? (
-        <table className="mapping-table">
-          <thead>
-            <tr>
-              <th>Campo de la API</th>
-              <th>Columna del Tablero</th>
-              <th style={{ width: 48 }}></th>
-            </tr>
-          </thead>
-          <tbody>
-            {mappings.map((row, i) => (
-              <MappingRow
-                key={i}
-                row={row}
-                index={i}
-                columns={columns}
-                usedApiFields={usedApiFields}
-                usedColumnIds={usedColumnIds}
-                onChange={(idx, patch, cols) => updateRow(idx, patch as Partial<MappingEntry>, cols)}
-                onRemove={removeRow}
-              />
-            ))}
-          </tbody>
-        </table>
-      ) : (
+      {/* Column headers */}
+      {mappings.length > 0 && (
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: '1fr 1fr 40px',
+            gap: 8,
+            paddingBottom: 4,
+            borderBottom: '2px solid var(--monday-primary, #0073ea)',
+            marginBottom: 4,
+          }}
+        >
+          <span style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', color: 'var(--monday-text-secondary, #676879)' }}>
+            Campo de la API
+          </span>
+          <span style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', color: 'var(--monday-text-secondary, #676879)' }}>
+            Columna del Tablero
+          </span>
+          <span />
+        </div>
+      )}
+
+      {/* Mapping rows */}
+      {mappings.map((row, i) => (
+        <MappingRow
+          key={i}
+          row={row}
+          index={i}
+          columns={columns}
+          usedApiFields={usedApiFields}
+          usedColumnIds={usedColumnIds}
+          onChange={(idx, patch, cols) => updateRow(idx, patch as Partial<MappingEntry>, cols)}
+          onRemove={removeRow}
+        />
+      ))}
+
+      {mappings.length === 0 && (
         <div className="card">
           <div className="empty-state">
             <div className="empty-state-icon">🔗</div>
