@@ -29,10 +29,21 @@ export default function App() {
     });
   }, [context?.boardId, context?.itemId]);
 
-  if (!ready || !context) {
+  if (!ready) {
     return (
       <div className="spinner-center" style={{ height: '100vh' }}>
         <Loader size="medium" />
+      </div>
+    );
+  }
+
+  if (!context) {
+    return (
+      <div className="spinner-center" style={{ height: '100vh', flexDirection: 'column', gap: 12 }}>
+        <div className="alert-box alert-box-error">
+          <span>✕</span>
+          <div>No se pudo conectar con Monday.com. Recarga la página o verifica que la app esté instalada correctamente.</div>
+        </div>
       </div>
     );
   }

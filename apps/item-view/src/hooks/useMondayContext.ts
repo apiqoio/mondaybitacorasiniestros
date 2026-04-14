@@ -52,23 +52,31 @@ export function useMondayContext() {
       };
       setContext(parsed);
       loadColumns(parsed.boardId);
+    }).catch((err: unknown) => {
+      console.error('No se pudo obtener el contexto de Monday:', err);
+      setReady(true);
     });
   }, []);
 
   async function loadColumns(boardId: string) {
-    const query = `
-      query {
-        boards(ids: [${boardId}]) {
-          columns { id title type }
+    try {
+      const query = `
+        query {
+          boards(ids: [${boardId}]) {
+            columns { id title type }
+          }
         }
-      }
-    `;
-    const result = await monday.api(query);
-    const cols: BoardColumn[] = result.data?.boards?.[0]?.columns ?? [];
-    // Excluir columnas no mapeables
-    const excluded = ['subtasks', 'formula', 'board_relation', 'direct_doc', 'name'];
-    setColumns(cols.filter((c) => !excluded.includes(c.type)));
-    setReady(true);
+      `;
+      const result = await monday.api(query);
+      const cols: BoardColumn[] = result.data?.boards?.[0]?.columns ?? [];
+      // Excluir columnas no mapeables
+      const excluded = ['subtasks', 'formula', 'board_relation', 'direct_doc', 'name'];
+      setColumns(cols.filter((c) => !excluded.includes(c.type)));
+    } catch (err) {
+      console.warn('No se pudieron cargar columnas del tablero:', err);
+    } finally {
+      setReady(true);
+    }
   }
 
   return { context, columns, ready };
