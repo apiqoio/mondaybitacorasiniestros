@@ -86,14 +86,16 @@ export async function escribirCampos(
     // formatColumnValue returns valid JSON (e.g. '"text"' or '{"date":"2024-01-01"}')
     const jsonValue = formatColumnValue(String(rawValue), mapping.columnType);
 
-    // JSON.stringify wraps the JSON as a properly escaped GraphQL string literal
+    // JSON.stringify wraps the JSON as a properly escaped GraphQL string literal.
+    // create_labels_if_missing: true hace que status/dropdown creen la etiqueta si no existe.
     const mutation = `
       mutation {
         change_column_value(
           board_id: ${boardId},
           item_id: ${itemId},
           column_id: "${mapping.columnId}",
-          value: ${JSON.stringify(jsonValue)}
+          value: ${JSON.stringify(jsonValue)},
+          create_labels_if_missing: true
         ) { id }
       }
     `;
