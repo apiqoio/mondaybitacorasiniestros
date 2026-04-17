@@ -1,7 +1,7 @@
 import { useCallback, useState } from 'react';
 import { consultarSiniestro, escribirCampos } from '../services/siniestro.service';
-import { loadMapping } from '../services/storage.service';
-import type { SiniestroApiResponse, SearchParams, MappingEntry } from '@shared/types';
+import { ACTIVE_MAPPINGS } from '../defaultMapping';
+import type { SiniestroApiResponse, SearchParams } from '@shared/types';
 
 export type FetchStatus = 'idle' | 'loading' | 'loaded' | 'error';
 export type WriteStatus = 'idle' | 'writing' | 'success' | 'error';
@@ -13,9 +13,7 @@ export function useSiniestro() {
   const [message, setMessage] = useState<string | null>(null);
   const [writeMessage, setWriteMessage] = useState<string | null>(null);
   const [writeDetalles, setWriteDetalles] = useState<string[]>([]);
-  const [mappings, setMappings] = useState<MappingEntry[]>([]);
 
-  // Step 1: Solo consultar datos de la API (sin escribir a Monday)
   const consultar = useCallback(
     async (params: SearchParams) => {
       setFetchStatus('loading');
@@ -28,11 +26,6 @@ export function useSiniestro() {
       try {
         const apiData = await consultarSiniestro(params);
         setData(apiData);
-
-        // Cargar mapeo para mostrarlo y tenerlo listo
-        const config = await loadMapping();
-        setMappings(config?.mappings ?? []);
-
         setFetchStatus('loaded');
       } catch (err: unknown) {
         const error = err as { message?: string };
@@ -43,7 +36,6 @@ export function useSiniestro() {
     [],
   );
 
-  // Step 2: Escribir los datos a Monday (usuario confirma manualmente)
   const poblar = useCallback(
     async (boardId: string, itemId: string) => {
       if (!data) return;
@@ -53,17 +45,11 @@ export function useSiniestro() {
       setWriteDetalles([]);
 
       try {
-        if (mappings.length < 2) {
-          setWriteMessage('Se requieren al menos 2 campos mapeados. Configura el mapeo primero.');
-          setWriteStatus('error');
-          return;
-        }
-
-        const { ok, errores, detalles } = await escribirCampos(boardId, itemId, data, mappings);
+        const { ok, errores, detalles } = await escribirCampos(boardId, itemId, data, ACTIVE_MAPPINGS);
         setWriteDetalles(detalles);
 
         if (errores > 0 && ok === 0) {
-          setWriteMessage('No se pudo actualizar ningún campo. Revisa la configuración de mapeo.');
+          setWriteMessage('No se pudo actualizar ningún campo.');
           setWriteStatus('error');
         } else if (errores > 0) {
           setWriteMessage(`Se actualizaron ${ok} campo(s). ${errores} campo(s) fallaron.`);
@@ -78,7 +64,7 @@ export function useSiniestro() {
         setWriteStatus('error');
       }
     },
-    [data, mappings],
+    [data],
   );
 
   return {
@@ -88,7 +74,7 @@ export function useSiniestro() {
     message,
     writeMessage,
     writeDetalles,
-    mappings,
+    mappings: ACTIVE_MAPPINGS,
     consultar,
     poblar,
   };

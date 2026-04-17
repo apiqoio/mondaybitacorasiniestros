@@ -146,8 +146,6 @@ export function SiniestroTab({ context, numeroSiniestro }: Props) {
     poblar(context.boardId, context.itemId);
   };
 
-  const hasMappings = mappings.length >= 2;
-
   return (
     <div className="section">
       {/* Search card */}
@@ -250,36 +248,23 @@ export function SiniestroTab({ context, numeroSiniestro }: Props) {
           <div className="card" style={{ marginTop: 16 }}>
             <div className="card-header">
               <span style={{ fontWeight: 600, fontSize: 14 }}>Actualizar Tablero</span>
-              {hasMappings && (
-                <span className="badge badge-info">
-                  {mappings.length} campo{mappings.length !== 1 ? 's' : ''} mapeado{mappings.length !== 1 ? 's' : ''}
-                </span>
-              )}
+              <span className="badge badge-info">
+                {mappings.length} campo{mappings.length !== 1 ? 's' : ''} mapeado{mappings.length !== 1 ? 's' : ''}
+              </span>
             </div>
             <div className="card-body">
-              {!hasMappings ? (
-                <div className="alert-box alert-box-warning">
-                  <span>⚠️</span>
-                  <div>
-                    No hay mapeo de campos configurado. Un administrador debe configurarlo en la pestaña <strong>Configuración</strong>.
-                  </div>
-                </div>
-              ) : (
-                <>
-                  <p style={{ margin: '0 0 12px', fontSize: 13, color: 'var(--monday-text-secondary)' }}>
-                    Revisa la información arriba. Al confirmar, se actualizarán los campos mapeados en el tablero.
-                  </p>
-                  <Button
-                    disabled={writeStatus === 'writing'}
-                    loading={writeStatus === 'writing'}
-                    onClick={handlePoblar}
-                    size="small"
-                    color="positive"
-                  >
-                    Confirmar y Actualizar Campos
-                  </Button>
-                </>
-              )}
+              <p style={{ margin: '0 0 12px', fontSize: 13, color: 'var(--monday-text-secondary)' }}>
+                Revisa la información arriba. Al confirmar, se actualizarán los campos mapeados en el tablero.
+              </p>
+              <Button
+                disabled={writeStatus === 'writing'}
+                loading={writeStatus === 'writing'}
+                onClick={handlePoblar}
+                size="small"
+                color="positive"
+              >
+                Confirmar y Actualizar Campos
+              </Button>
 
               {/* Write results */}
               {writeStatus === 'success' && writeMessage && (

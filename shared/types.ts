@@ -158,11 +158,6 @@ export interface MappingEntry {
   columnType: string;   // 'text' | 'numbers' | 'date' | 'status' | ...
 }
 
-// Configuración completa de mapeo guardada en Monday Storage
-export interface MappingConfig {
-  mappings: MappingEntry[];
-}
-
 // Payload que el backend retorna al frontend
 export interface SiniestroResult {
   data: SiniestroApiResponse;

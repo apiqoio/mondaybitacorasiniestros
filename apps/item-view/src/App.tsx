@@ -2,12 +2,11 @@ import React, { useEffect, useState } from 'react';
 import { Loader } from '@vibe/core';
 import { useMondayContext, monday } from './hooks/useMondayContext';
 import { SiniestroTab } from './components/SiniestroTab';
-import { ConfigTab } from './components/ConfigTab';
 
 const SINIESTRO_COLUMN_ID = 'siniestro__1';
 
 export default function App() {
-  const { context, columns, ready } = useMondayContext();
+  const { context, ready } = useMondayContext();
   const [numeroSiniestro, setNumeroSiniestro] = useState<string | null>(null);
 
   useEffect(() => {
@@ -50,7 +49,6 @@ export default function App() {
 
   return (
     <div className="app-shell">
-      {/* Header */}
       <div className="app-header">
         <div className="app-header-icon">BS</div>
         <div>
@@ -59,15 +57,7 @@ export default function App() {
         </div>
       </div>
 
-      {/* Siniestro — visible for all users */}
       <SiniestroTab context={context} numeroSiniestro={numeroSiniestro} />
-
-      {/* Configuración — only for board owners */}
-      {context.isAdmin && (
-        <div style={{ borderTop: '1px solid var(--monday-border, #d0d4e4)', marginTop: 16, paddingTop: 8 }}>
-          <ConfigTab columns={columns} />
-        </div>
-      )}
     </div>
   );
 }

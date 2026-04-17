@@ -12,18 +12,11 @@ export interface MondayContextData {
   accountId: number;
 }
 
-export interface BoardColumn {
-  id: string;
-  title: string;
-  type: string;
-}
-
 /**
- * Lee el contexto de Monday y las columnas del tablero actual.
+ * Lee el contexto de Monday (board/item/user).
  */
 export function useMondayContext() {
   const [context, setContext] = useState<MondayContextData | null>(null);
-  const [columns, setColumns] = useState<BoardColumn[]>([]);
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
@@ -37,7 +30,7 @@ export function useMondayContext() {
         accountId: ctx.account ? (ctx.account as { id: number }).id : 0,
       };
       setContext(parsed);
-      loadColumns(parsed.boardId);
+      setReady(true);
       monday.execute('valueCreatedForUser');
     });
 
@@ -51,35 +44,14 @@ export function useMondayContext() {
         accountId: ctx.account ? (ctx.account as { id: number }).id : 0,
       };
       setContext(parsed);
-      loadColumns(parsed.boardId);
+      setReady(true);
     }).catch((err: unknown) => {
       console.error('No se pudo obtener el contexto de Monday:', err);
       setReady(true);
     });
   }, []);
 
-  async function loadColumns(boardId: string) {
-    try {
-      const query = `
-        query {
-          boards(ids: [${boardId}]) {
-            columns { id title type }
-          }
-        }
-      `;
-      const result = await monday.api(query);
-      const cols: BoardColumn[] = result.data?.boards?.[0]?.columns ?? [];
-      // Excluir columnas no mapeables
-      const excluded = ['subtasks', 'formula', 'board_relation', 'direct_doc', 'name'];
-      setColumns(cols.filter((c) => !excluded.includes(c.type)));
-    } catch (err) {
-      console.warn('No se pudieron cargar columnas del tablero:', err);
-    } finally {
-      setReady(true);
-    }
-  }
-
-  return { context, columns, ready };
+  return { context, ready };
 }
 
 export { monday };
